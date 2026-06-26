@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hare 出席</title>
+<style>
+  :root{
+    --ink:#1b2a4a; --grape:#6c5ce7; --grape-deep:#4834c4;
+    --mint:#13c6a5; --coral:#ff6b6b; --sun:#ffc844;
+    --cloud:#ede7f6; --shadow:rgba(72,52,196,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, #fff3d6 0 22%, transparent 40%),
+      radial-gradient(circle at 88% 14%, #e0d5ff 0 20%, transparent 38%),
+      linear-gradient(160deg,#fdfbff 0%,#f3eeff 100%);
+    color:var(--ink);min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;padding:18px 14px 60px;
+  }
+  .brand{font-weight:900;font-size:15px;color:var(--grape-deep);margin-bottom:14px;letter-spacing:.04em;display:flex;align-items:center;gap:7px}
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--sun),var(--coral))}
+  .stage{width:100%;max-width:440px}
+  .card{background:#fff;border-radius:26px;padding:26px 22px;box-shadow:0 14px 38px var(--shadow);border:3px solid #fff;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,var(--sun) 0 60%,transparent 62%);opacity:.22}
+  h1.title{font-size:22px;font-weight:900;margin-bottom:4px;position:relative}
+  .sub{font-size:13px;color:#8a85a6;font-weight:700;margin-bottom:20px}
+  label.fld{display:block;font-size:12.5px;font-weight:800;color:#7a749c;margin:0 0 7px 3px}
+  input.txt{width:100%;font-family:inherit;font-size:17px;font-weight:700;color:var(--ink);padding:14px 16px;border:2.5px solid var(--cloud);border-radius:16px;background:#faf8ff;transition:.2s}
+  input.txt:focus{outline:none;border-color:var(--grape);background:#fff}
+  .btn{width:100%;font-family:inherit;font-size:17px;font-weight:900;color:#fff;background:linear-gradient(135deg,var(--grape),var(--grape-deep));border:none;border-radius:16px;padding:16px;cursor:pointer;box-shadow:0 8px 20px var(--shadow);transition:transform .12s,box-shadow .2s;margin-top:18px;letter-spacing:.03em}
+  .btn:active{transform:translateY(2px) scale(.99)}
+  .btn.mint{background:linear-gradient(135deg,var(--mint),#0fa389)}
+  .btn.coral{background:linear-gradient(135deg,var(--coral),#e84d4d)}
+  .btn.ghost{background:#fff;color:var(--grape);border:2.5px solid var(--cloud);box-shadow:none}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .opt-row{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .opt-row input.txt{padding:11px 13px;font-size:15px}
+  .opt-pick{width:30px;height:30px;flex:0 0 30px;border-radius:50%;border:2.5px solid var(--cloud);background:#fff;cursor:pointer;font-weight:900;color:#cfc8e8;font-size:15px;display:grid;place-items:center;transition:.15s}
+  .opt-pick.correct{background:var(--mint);border-color:var(--mint);color:#fff}
+  .seconds{display:flex;gap:8px;margin-top:6px}
+  .seconds button{flex:1;border:2.5px solid var(--cloud);background:#fff;border-radius:13px;padding:11px;font-family:inherit;font-weight:800;color:#8a85a6;cursor:pointer;font-size:14px;transition:.15s}
+  .seconds button.on{border-color:var(--grape);background:var(--grape);color:#fff}
+  .pts{display:flex;gap:10px}
+  .pts>div{flex:1}
+  .pts input.txt{text-align:center}
+  .ringwrap{display:flex;justify-content:center;margin:6px 0 16px}
+  .ring{position:relative;width:120px;height:120px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .num{position:absolute;inset:0;display:grid;place-items:center;font-size:40px;font-weight:900;color:var(--grape-deep)}
+  .qtext{font-size:20px;font-weight:900;line-height:1.4;margin-bottom:4px}
+  .choice{width:100%;text-align:left;font-family:inherit;font-size:16px;font-weight:800;color:var(--ink);background:#faf8ff;border:2.5px solid var(--cloud);border-radius:16px;padding:15px 17px;margin-top:11px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:12px}
+  .choice:active{transform:scale(.985)}
+  .choice .mk{width:26px;height:26px;flex:0 0 26px;border-radius:50%;background:var(--cloud);color:var(--grape-deep);font-weight:900;display:grid;place-items:center;font-size:14px}
+  .choice.sel{border-color:var(--grape);background:#f1ecff}
+  .choice.sel .mk{background:var(--grape);color:#fff}
+  .pill{display:inline-block;background:var(--cloud);color:var(--grape-deep);font-weight:800;font-size:12px;padding:5px 12px;border-radius:999px;margin-bottom:14px}
+  .result{text-align:center;padding:14px 6px}
+  .result .emoji{font-size:60px;margin-bottom:8px;display:block}
+  .result h2{font-size:24px;font-weight:900;margin-bottom:6px}
+  .result p{font-size:14px;color:#8a85a6;font-weight:700;line-height:1.6}
+  .badge{display:inline-flex;align-items:center;gap:8px;background:var(--mint);color:#fff;font-weight:900;padding:10px 20px;border-radius:999px;margin-top:14px;font-size:15px;box-shadow:0 8px 18px rgba(19,198,165,.35)}
+  .badge.miss{background:var(--coral);box-shadow:0 8px 18px rgba(255,107,107,.35)}
+  .hint{font-size:12px;color:#a59fc0;text-align:center;margin-top:14px;line-height:1.6;font-weight:600}
+  .hidden{display:none!important}
+  .tally{background:#faf8ff;border:2.5px solid var(--cloud);border-radius:16px;padding:16px;margin-top:8px}
+  .tally .row{display:flex;justify-content:space-between;font-weight:800;font-size:14px;padding:7px 2px;color:#6a6488}
+  .tally .row b{color:var(--grape-deep)}
+  .tally .bar{height:8px;background:var(--cloud);border-radius:99px;margin-top:4px;overflow:hidden}
+  .tally .bar i{display:block;height:100%;background:var(--grape);border-radius:99px}
+  .who{font-size:12px;color:#8a85a6;font-weight:700;margin-top:10px;line-height:1.7}
+  .who b{color:var(--grape-deep)}
+  .rolepick{display:flex;flex-direction:column;gap:14px}
+  .rolebtn{display:flex;align-items:center;gap:16px;background:#fff;border:2.5px solid var(--cloud);border-radius:20px;padding:20px;cursor:pointer;transition:.15s;text-align:left}
+  .rolebtn:active{transform:scale(.99)}
+  .rolebtn .ic{font-size:34px}
+  .rolebtn b{display:block;font-size:18px;font-weight:900;color:var(--ink)}
+  .rolebtn span{font-size:13px;color:#8a85a6;font-weight:700}
+  .conn{font-size:11px;font-weight:800;text-align:center;margin-top:16px;color:#b7b1cc}
+  .conn.ok{color:var(--mint)}
+  .draftrow{display:flex;align-items:center;gap:10px;background:#faf8ff;border:2.5px solid var(--cloud);border-radius:14px;padding:12px 14px;margin-bottom:9px}
+  .draftrow .qt{flex:1;font-weight:800;font-size:14px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .draftrow .go{background:var(--mint);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-family:inherit;font-weight:900;font-size:13px;cursor:pointer}
+  .draftrow .del{background:none;border:none;color:#c9c3dd;font-size:18px;cursor:pointer;font-weight:900}
+  @keyframes pop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+  .pop{animation:pop .4s cubic-bezier(.2,.9,.3,1.3)}
+</style>
+</head>
+<body>
+
+<div class="brand"><span class="dot"></span>Hare 出席</div>
+
+<div class="stage">
+
+  <!-- ロール選択 -->
+  <div id="p-pick" class="card">
+    <h1 class="title">どっちで使う?</h1>
+    <div class="sub">先生は問題を出す人、学生は答える人</div>
+    <div class="rolepick">
+      <button class="rolebtn" onclick="goTeacher()"><span class="ic">🧑‍🏫</span><div><b>先生として使う</b><span>問題を作って出題する</span></div></button>
+      <button class="rolebtn" onclick="goStudent()"><span class="ic">🙋</span><div><b>学生として使う</b><span>学籍番号を入れて答える</span></div></button>
+    </div>
+    <div class="conn" id="conn-pick">サーバに接続中…</div>
+  </div>
+
+  <!-- ===== 先生：問題づくり＆下書き ===== -->
+  <div id="p-make" class="card hidden">
+    <h1 class="title">きょうの問題</h1>
+    <div class="sub">聞いてないと答えられない問いがコツ</div>
+    <label class="fld">問題文</label>
+    <input class="txt" id="qtext" placeholder="例：今日の話に出た『○○の法則』は?">
+    <label class="fld" style="margin-top:16px">選択肢（◯を押すと正解）</label>
+    <div id="opts"></div>
+    <button class="btn ghost" style="margin-top:4px;font-size:14px;padding:11px" onclick="addOpt()">＋ 選択肢をふやす</button>
+    <label class="fld" style="margin-top:18px">制限時間</label>
+    <div class="seconds" id="secs">
+      <button onclick="setSec(10,this)">10秒</button>
+      <button class="on" onclick="setSec(20,this)">20秒</button>
+      <button onclick="setSec(30,this)">30秒</button>
+      <button onclick="setSec(60,this)">60秒</button>
+    </div>
+    <label class="fld" style="margin-top:18px">配点（先生が決める）</label>
+    <div class="pts">
+      <div><input class="txt" id="ptAttend" type="number" step="0.5" value="1"><div class="hint" style="margin-top:4px">出席点</div></div>
+      <div><input class="txt" id="ptCorrect" type="number" step="0.5" value="1"><div class="hint" style="margin-top:4px">正解ボーナス</div></div>
+    </div>
+    <button class="btn mint" onclick="startNow()">今すぐ出題する ▶</button>
+    <button class="btn ghost" onclick="saveDraft()">下書きに保存（あとで出す）</button>
+
+    <div id="draftbox" style="margin-top:24px"></div>
+    <button class="btn ghost" style="margin-top:18px" onclick="show('p-pick')">もどる</button>
+    <div class="conn ok" id="conn-make">✓ サーバに接続中</div>
+  </div>
+
+  <!-- ===== 先生：出題中／集計 ===== -->
+  <div id="p-live" class="card hidden">
+    <span class="pill" id="t-livepill">受付中…</span>
+    <h1 class="title" id="t-liveq"></h1>
+    <div class="ringwrap"><div class="ring">
+      <svg width="120" height="120"><circle cx="60" cy="60" r="52" fill="none" stroke="#eee" stroke-width="9"/>
+      <circle id="t-prog" cx="60" cy="60" r="52" fill="none" stroke="#6c5ce7" stroke-width="9" stroke-linecap="round"/></svg>
+      <div class="num" id="t-num">20</div>
+    </div></div>
+    <div class="tally" id="t-tally"></div>
+    <div class="who" id="t-who"></div>
+    <button class="btn ghost" onclick="finishLive()">出題をおえる</button>
+  </div>
+
+  <!-- ===== 学生：ログイン ===== -->
+  <div id="p-login" class="card hidden">
+    <h1 class="title">出席する</h1>
+    <div class="sub">学籍番号を入れて待っててね</div>
+    <label class="fld">学籍番号</label>
+    <input class="txt" id="sid" placeholder="例：21B0457" autocomplete="off">
+    <button class="btn" onclick="studentLogin()">入る</button>
+    <button class="btn ghost" onclick="show('p-pick')">もどる</button>
+    <div class="conn ok" id="conn-login">✓ サーバに接続中</div>
+  </div>
+
+  <!-- ===== 学生：待機 ===== -->
+  <div id="p-wait" class="card hidden">
+    <div class="result">
+      <span class="emoji">☕️</span>
+      <h2>準備OK</h2>
+      <p id="s-waitname"></p>
+      <p style="margin-top:8px">先生が問題を出すと、ここに表示されます…</p>
+    </div>
+    <div class="conn ok">✓ 待機中</div>
+  </div>
+
+  <!-- ===== 学生：回答 ===== -->
+  <div id="p-quiz" class="card hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span class="pill" style="margin:0">のこり時間</span>
+      <div class="ring" style="width:54px;height:54px">
+        <svg width="54" height="54"><circle cx="27" cy="27" r="22" fill="none" stroke="#eee" stroke-width="6"/>
+        <circle id="s-prog" cx="27" cy="27" r="22" fill="none" stroke="#ff6b6b" stroke-width="6" stroke-linecap="round"/></svg>
+        <div class="num" id="s-num" style="font-size:20px;color:#e84d4d">20</div>
+      </div>
+    </div>
+    <div class="qtext" id="s-q"></div>
+    <div id="s-choices"></div>
+  </div>
+
+  <!-- ===== 学生：結果 ===== -->
+  <div id="p-done" class="card hidden">
+    <div class="result">
+      <span class="emoji" id="s-emoji">🎉</span>
+      <h2 id="s-h2">出席！</h2>
+      <p id="s-msg"></p>
+      <div class="badge" id="s-badge">✓ 出席カウント</div>
+    </div>
+    <div class="hint" id="s-hint"></div>
+    <div class="conn ok">✓ 記録しました</div>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { getDatabase, ref, set, onValue, push, remove, get, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+
+/* ===== あなたの鍵束 ===== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDFrBTNx6BUhZ7AvLRi5IPojUFJU8m0QrQ",
+  authDomain: "hare-attendance.firebaseapp.com",
+  databaseURL: "https://hare-attendance-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hare-attendance",
+  storageBucket: "hare-attendance.firebasestorage.app",
+  messagingSenderId: "679564882976",
+  appId: "1:679564882976:web:bc06fb20db197e9a2cb845"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* ===== 画面切替 ===== */
+function show(id){
+  ['p-pick','p-make','p-live','p-login','p-wait','p-quiz','p-done']
+    .forEach(p=>document.getElementById(p).classList.add('hidden'));
+  const e=document.getElementById(id);e.classList.remove('hidden');
+  e.classList.add('pop');setTimeout(()=>e.classList.remove('pop'),400);
+}
+window.show=show;
+
+/* ===== この端末のID（一台一回ロック用） ===== */
+function deviceId(){
+  let d=null;
+  try{ d=window.name||''; }catch(e){}
+  if(!d || d.indexOf('dev_')!==0){ d='dev_'+Math.random().toString(36).slice(2)+Date.now().toString(36); try{window.name=d;}catch(e){} }
+  return d;
+}
+const DEVICE=deviceId();
+
+/* ===== 状態 ===== */
+let limitSec=20;
+let opts=[{t:'',correct:false},{t:'',correct:false}];
+let student={id:null};
+let timer=null, tickT=null;
+let liveKey=null;        // 今出題中の問題のキー
+let answeredThisRound=false;
+
+/* ========== 先生：問題エディタ ========== */
+function renderOpts(){
+  const box=document.getElementById('opts');box.innerHTML='';
+  opts.forEach((o,i)=>{
+    const row=document.createElement('div');row.className='opt-row';
+    const pick=document.createElement('button');pick.className='opt-pick'+(o.correct?' correct':'');
+    pick.textContent=o.correct?'✓':'◯';pick.onclick=()=>markCorrect(i);
+    const inp=document.createElement('input');inp.className='txt';inp.placeholder='選択肢 '+(i+1);inp.value=o.t;
+    inp.oninput=e=>opts[i].t=e.target.value;
+    row.appendChild(pick);row.appendChild(inp);box.appendChild(row);
+  });
+}
+function addOpt(){ if(opts.length>=5)return; opts.push({t:'',correct:false}); renderOpts(); }
+function markCorrect(i){ opts.forEach((o,j)=>o.correct=(j===i)); renderOpts(); }
+function setSec(s,el){ limitSec=s; document.querySelectorAll('#secs button').forEach(b=>b.classList.remove('on')); el.classList.add('on'); }
+window.addOpt=addOpt; window.setSec=setSec;
+
+function buildQuiz(){
+  const text=document.getElementById('qtext').value.trim();
+  const filled=opts.filter(o=>o.t.trim());
+  const correctIdx=opts.filter(o=>o.t.trim()).findIndex(o=>o.correct);
+  if(!text){alert('問題文を入れてね');return null;}
+  if(filled.length<2){alert('選択肢は2つ以上いれてね');return null;}
+  if(correctIdx<0){alert('正解の◯を1つえらんでね');return null;}
+  return {
+    text,
+    options:filled.map(o=>o.t.trim()),
+    correctIndex:correctIdx,
+    sec:limitSec,
+    ptAttend:parseFloat(document.getElementById('ptAttend').value)||0,
+    ptCorrect:parseFloat(document.getElementById('ptCorrect').value)||0,
+    createdAt:Date.now()
+  };
+}
+function clearEditor(){
+  document.getElementById('qtext').value='';
+  opts=[{t:'',correct:false},{t:'',correct:false}];renderOpts();
+}
+
+/* 下書き保存 */
+async function saveDraft(){
+  const q=buildQuiz(); if(!q)return;
+  await push(ref(db,'drafts'), q);
+  clearEditor();
+  alert('下書きに保存したよ。下の一覧から、当日「出題」を押せます。');
+}
+window.saveDraft=saveDraft;
+
+/* 下書き一覧をリアルタイム表示 */
+function watchDrafts(){
+  onValue(ref(db,'drafts'),(snap)=>{
+    const box=document.getElementById('draftbox');box.innerHTML='';
+    const v=snap.val();
+    if(!v){box.innerHTML='<div class="hint">下書きはまだありません</div>';return;}
+    const head=document.createElement('div');head.className='fld';head.textContent='下書き（タップで出題）';box.appendChild(head);
+    Object.entries(v).forEach(([key,q])=>{
+      const row=document.createElement('div');row.className='draftrow';
+      const qt=document.createElement('div');qt.className='qt';qt.textContent=q.text;
+      const go=document.createElement('button');go.className='go';go.textContent='出題';go.onclick=()=>startFrom(q,key);
+      const del=document.createElement('button');del.className='del';del.textContent='×';del.onclick=()=>remove(ref(db,'drafts/'+key));
+      row.appendChild(qt);row.appendChild(go);row.appendChild(del);box.appendChild(row);
+    });
+  });
+}
+
+/* 出題（今すぐ／下書きから） */
+async function startNow(){ const q=buildQuiz(); if(!q)return; await publish(q); clearEditor(); }
+async function startFrom(q,draftKey){ await publish(q); if(draftKey) await remove(ref(db,'drafts/'+draftKey)); }
+window.startNow=startNow;
+
+async function publish(q){
+  // live に1問だけ置く。終了時刻もサーバ基準で持たせる
+  const payload={...q, openAt:Date.now(), endAt:Date.now()+q.sec*1000, status:'open'};
+  await set(ref(db,'live'), payload);
+  // 回答はクリア（前回ぶんを消す）
+  await set(ref(db,'answers'), null);
+  teacherWatchLive();
+  runTeacherTimer(payload);
+  show('p-live');
+}
+
+function runTeacherTimer(payload){
+  const total=payload.sec; const prog=document.getElementById('t-prog'); const C=2*Math.PI*52; prog.style.strokeDasharray=C;
+  document.getElementById('t-liveq').textContent=payload.text;
+  document.getElementById('t-livepill').textContent='受付中…';
+  prog.style.stroke='#6c5ce7';
+  const draw=()=>{ const left=Math.max(0,Math.ceil((payload.endAt-Date.now())/1000));
+    document.getElementById('t-num').textContent=left; prog.style.strokeDashoffset=C*(1-left/total); return left; };
+  draw();
+  clearInterval(tickT);
+  tickT=setInterval(()=>{ const left=draw(); if(left<=0){ clearInterval(tickT); closeReception(); } },250);
+}
+async function closeReception(){
+  document.getElementById('t-num').textContent='0';
+  document.getElementById('t-livepill').textContent='受付しめきり';
+  document.getElementById('t-prog').style.stroke='#13c6a5';
+  await set(ref(db,'live/status'),'closed');
+}
+
+/* 集計（回答をリアルタイム監視） */
+let liveData=null;
+function teacherWatchLive(){
+  onValue(ref(db,'live'),(s)=>{ liveData=s.val(); });
+  onValue(ref(db,'answers'),(snap)=>{
+    const v=snap.val()||{};
+    const arr=Object.values(v);
+    renderTally(arr);
+  });
+}
+function renderTally(arr){
+  if(!liveData)return;
+  const t=document.getElementById('t-tally');
+  const n=arr.length;
+  const correctN=arr.filter(a=>a.correct).length;
+  let rows=`<div class="row"><span>回答した人</span><b>${n}人</b></div>
+            <div class="row"><span>正解</span><b>${correctN}人</b></div>`;
+  liveData.options.forEach((o,i)=>{
+    const c=arr.filter(a=>a.choice===i).length;
+    const pct=n?Math.round(c/n*100):0;
+    rows+=`<div class="row" style="margin-top:6px"><span>${i===liveData.correctIndex?'⭐️ ':''}${o}</span><b>${c}</b></div>
+           <div class="bar"><i style="width:${pct}%;background:${i===liveData.correctIndex?'#13c6a5':'#6c5ce7'}"></i></div>`;
+  });
+  t.innerHTML=rows;
+  // 誰が答えたか
+  const who=document.getElementById('t-who');
+  if(n){
+    who.innerHTML='出席：'+arr.map(a=>`<b>${a.id}</b>${a.correct?'◎':'○'}`).join('　');
+  }else{ who.innerHTML=''; }
+}
+function finishLive(){
+  clearInterval(tickT);
+  show('p-make');
+}
+window.finishLive=finishLive;
+
+/* ========== 学生側 ========== */
+function studentLogin(){
+  const id=document.getElementById('sid').value.trim();
+  if(!id){alert('学籍番号を入れてね');return;}
+  student.id=id;
+  document.getElementById('s-waitname').textContent=id+' さん';
+  show('p-wait');
+  studentWatch();
+}
+window.studentLogin=studentLogin;
+
+let lastSeenRound=null;
+function studentWatch(){
+  onValue(ref(db,'live'),(snap)=>{
+    const q=snap.val();
+    if(!q){ if(!isAnsweringOrDone()) show('p-wait'); return; }
+    const roundId=q.openAt;
+    if(q.status==='open' && Date.now()<q.endAt){
+      if(roundId!==lastSeenRound){
+        lastSeenRound=roundId;
+        answeredThisRound=false;
+        startStudentQuiz(q);
+      }
+    }
+  });
+}
+function isAnsweringOrDone(){
+  return !document.getElementById('p-quiz').classList.contains('hidden')
+      || !document.getElementById('p-done').classList.contains('hidden');
+}
+
+let sStart=0, curQ=null;
+function startStudentQuiz(q){
+  curQ=q; answeredThisRound=false;
+  document.getElementById('s-q').textContent=q.text;
+  const box=document.getElementById('s-choices');box.innerHTML='';
+  const marks=['A','B','C','D','E'];
+  q.options.forEach((o,i)=>{
+    const b=document.createElement('button');b.className='choice';
+    const mk=document.createElement('span');mk.className='mk';mk.textContent=marks[i];
+    const tx=document.createElement('span');tx.textContent=o;
+    b.appendChild(mk);b.appendChild(tx);
+    b.onclick=()=>chooseAnswer(i,b);
+    box.appendChild(b);
+  });
+  const prog=document.getElementById('s-prog');const C=2*Math.PI*22;prog.style.strokeDasharray=C;
+  const draw=()=>{ const left=Math.max(0,Math.ceil((q.endAt-Date.now())/1000));
+    document.getElementById('s-num').textContent=left; prog.style.strokeDashoffset=C*(1-left/q.sec); return left; };
+  draw(); show('p-quiz');
+  clearInterval(timer);
+  timer=setInterval(()=>{ const left=draw(); if(left<=0){ clearInterval(timer); if(!answeredThisRound) timeUp(); } },250);
+}
+
+async function chooseAnswer(i,el){
+  if(answeredThisRound)return; answeredThisRound=true; clearInterval(timer);
+  document.querySelectorAll('.choice').forEach(c=>c.style.pointerEvents='none');
+  el.classList.add('sel');
+  const correct=(i===curQ.correctIndex);
+  const score=(curQ.ptAttend||0)+(correct?(curQ.ptCorrect||0):0);
+  const record={ id:student.id, choice:i, correct, score,
+                 device:DEVICE, round:curQ.openAt, at:Date.now() };
+  // 一台一回ロック：この端末＋この回 のキーで保存（同じ端末で二人目は上書きになるだけで増えない）
+  const key='r'+curQ.openAt+'_'+DEVICE;
+  await set(ref(db,'answers/'+key), record);
+  document.getElementById('s-emoji').textContent= correct?'🎉':'✅';
+  document.getElementById('s-h2').textContent='出席！';
+  document.getElementById('s-msg').textContent= correct
+     ? 'バッチリ正解。ちゃんと聞いてたね。' : '答えはちがったけど、その場にいた証明はバッチリ。';
+  const badge=document.getElementById('s-badge');badge.className='badge';badge.textContent='✓ 出席カウント（'+score+'点）';
+  document.getElementById('s-hint').textContent='記録：'+student.id;
+  show('p-done');
+  setTimeout(()=>{ if(!isLiveOpen()) backToWait(); }, 4000);
+}
+function timeUp(){
+  document.getElementById('s-emoji').textContent='🐢';
+  document.getElementById('s-h2').textContent='時間切れ';
+  document.getElementById('s-msg').textContent='間に合わなかったときは、あわてず先生に直接ひとこと言えば大丈夫。';
+  const badge=document.getElementById('s-badge');badge.className='badge miss';badge.textContent='× カウントならず';
+  document.getElementById('s-hint').textContent='通信トラブルなどの事故は、人が拾う設計です';
+  show('p-done');
+  setTimeout(()=>backToWait(),4000);
+}
+function isLiveOpen(){ return false; }
+function backToWait(){ if(student.id){ show('p-wait'); } }
+
+/* ===== ロール入口 ===== */
+function goTeacher(){ renderOpts(); watchDrafts(); teacherWatchLive(); show('p-make'); }
+function goStudent(){ show('p-login'); }
+window.goTeacher=goTeacher; window.goStudent=goStudent;
+
+/* 接続確認 */
+get(ref(db,'.info/connected')).catch(()=>{});
+onValue(ref(db,'.info/connected'),(s)=>{
+  const ok=s.val()===true;
+  const e=document.getElementById('conn-pick');
+  if(e){ e.textContent= ok?'✓ サーバに接続できました':'サーバに接続中…'; e.className='conn'+(ok?' ok':''); }
+});
+
+renderOpts();
+</script>
+</body>
+</html>

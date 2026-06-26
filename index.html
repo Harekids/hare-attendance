@@ -203,11 +203,30 @@ function deviceId(){
 }
 const DEVICE=deviceId();
 
+/* 日付キー（その回が何日のものか）。1日1回の集計に使う */
+function dayKey(ts){
+  const d=new Date(ts);
+  const z=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
+}
+
 let student={id:null};
 let timer=null, curQ=null, answeredThisRound=false, lastSeenRound=null;
 
 function savedId(){ try{ return localStorage.getItem('hare_sid')||''; }catch(e){ return ''; } }
 function rememberId(id){ try{ localStorage.setItem('hare_sid',id); }catch(e){} }
+
+/* この端末が「もう答えた問題」を記憶する（一台一回の本体） */
+function answeredRounds(){
+  try{ return JSON.parse(localStorage.getItem('hare_answered')||'[]'); }catch(e){ return []; }
+}
+function markRoundAnswered(round){
+  try{
+    const a=answeredRounds();
+    if(!a.includes(round)){ a.push(round); localStorage.setItem('hare_answered', JSON.stringify(a.slice(-50))); }
+  }catch(e){}
+}
+function hasAnswered(round){ return answeredRounds().includes(round); }
 
 function studentLogin(){
   const id=document.getElementById('sid').value.trim();
@@ -231,9 +250,23 @@ function studentWatch(){
     if(!q){ if(!isAnsweringOrDone()) show('p-wait'); return; }
     const roundId=q.openAt;
     if(q.status==='open' && Date.now()<q.endAt){
-      if(roundId!==lastSeenRound){ lastSeenRound=roundId; answeredThisRound=false; startStudentQuiz(q); }
+      if(roundId!==lastSeenRound){
+        lastSeenRound=roundId;
+        // この端末がこの問題に既に答えていたら、答えさせない（一台一回）
+        if(hasAnswered(roundId)){ showAlreadyDone(); return; }
+        answeredThisRound=false; startStudentQuiz(q);
+      }
     }
   });
+}
+function showAlreadyDone(){
+  document.getElementById('s-mark').className='mark';
+  document.getElementById('s-mark').textContent='✓';
+  document.getElementById('s-h2').textContent='回答ずみ';
+  document.getElementById('s-msg').textContent='この問題には、この端末でもう答えています。';
+  document.getElementById('done-id').textContent='学籍番号：'+(student.id||'');
+  show('p-done');
+  setTimeout(()=>backToWait(),4000);
 }
 function isAnsweringOrDone(){
   return !document.getElementById('p-quiz').classList.contains('hidden')
@@ -269,7 +302,15 @@ async function chooseAnswer(i,el){
   const score=(curQ.ptAttend||0)+(correct?(curQ.ptCorrect||0):0);
   const record={ id:student.id, choice:i, correct, score, device:DEVICE, round:curQ.openAt, at:Date.now() };
   const key='r'+curQ.openAt+'_'+DEVICE;
-  try{ await set(ref(db,'answers/'+key), record); }catch(e){}
+  markRoundAnswered(curQ.openAt);
+  try{
+    await set(ref(db,'answers/'+key), record);
+    // 出席簿用の履歴にも残す（日付ごと・学籍番号ごと）
+    const day=dayKey(curQ.openAt);
+    await set(ref(db,'history/'+day+'/'+student.id), {
+      id:student.id, correct, score, round:curQ.openAt, at:Date.now()
+    });
+  }catch(e){}
   document.getElementById('s-mark').className='mark';
   document.getElementById('s-mark').textContent='OK!';
   document.getElementById('s-h2').textContent='記録しました';

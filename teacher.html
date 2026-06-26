@@ -65,6 +65,21 @@
   .draftrow .del{background:none;border:none;color:#c9c3dd;font-size:18px;cursor:pointer;font-weight:900}
   .conn{font-size:11px;font-weight:800;text-align:center;margin-top:16px;color:#b7b1cc}
   .conn.ok{color:var(--mint)}
+  .rsum{display:flex;gap:10px;margin-bottom:16px}
+  .rsum .box{flex:1;background:#faf8ff;border:2px solid var(--cloud);border-radius:14px;padding:12px;text-align:center}
+  .rsum .box b{display:block;font-size:22px;font-weight:900;color:var(--grape-deep)}
+  .rsum .box span{font-size:11px;font-weight:800;color:#8a85a6}
+  .rtable-wrap{overflow-x:auto;border:2px solid var(--cloud);border-radius:14px;margin-bottom:8px;-webkit-overflow-scrolling:touch}
+  table.rt{border-collapse:collapse;width:100%;font-size:13px}
+  table.rt th,table.rt td{padding:9px 11px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--cloud)}
+  table.rt th{background:#f3eeff;font-weight:800;color:var(--grape-deep);position:sticky;top:0}
+  table.rt td:first-child,table.rt th:first-child{text-align:left;font-weight:800;position:sticky;left:0;background:#fff;z-index:1}
+  table.rt th:first-child{background:#f3eeff;z-index:2}
+  table.rt .ok{color:var(--mint);font-weight:900}
+  table.rt .cor{color:var(--grape-deep);font-weight:900}
+  table.rt .miss{color:#d8d3e6}
+  table.rt tr:last-child td{border-bottom:none}
+  .rempty{text-align:center;color:#a8a6ba;font-weight:700;padding:30px 0;font-size:14px}
   @keyframes pop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
   .pop{animation:pop .4s cubic-bezier(.2,.9,.3,1.3)}
 </style>
@@ -99,7 +114,18 @@
     <button class="btn mint" onclick="startNow()">今すぐ出題する ▶</button>
     <button class="btn ghost" onclick="saveDraft()">下書きに保存（あとで出す）</button>
     <div id="draftbox" style="margin-top:24px"></div>
+    <button class="btn ghost" style="margin-top:18px" onclick="openRoster()">📋 出席簿を見る</button>
     <div class="conn ok" id="conn-make">サーバに接続中…</div>
+  </div>
+
+  <!-- 出席簿 -->
+  <div id="p-roster" class="card hidden">
+    <h1 class="title">出席簿</h1>
+    <div class="sub">これまでの出席を、学籍番号ごとにまとめています。</div>
+    <div id="roster-summary" class="rsum"></div>
+    <div class="rtable-wrap"><div id="roster-table"></div></div>
+    <button class="btn mint" onclick="downloadCSV()">CSVでダウンロード</button>
+    <button class="btn ghost" onclick="show('p-make')">もどる</button>
   </div>
 
   <!-- 出題中／集計 -->
@@ -136,7 +162,7 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 function show(id){
-  ['p-make','p-live'].forEach(p=>document.getElementById(p).classList.add('hidden'));
+  ['p-make','p-live','p-roster'].forEach(p=>document.getElementById(p).classList.add('hidden'));
   const e=document.getElementById(id);e.classList.remove('hidden');
   e.classList.add('pop');setTimeout(()=>e.classList.remove('pop'),400);
 }
@@ -252,6 +278,98 @@ function renderTally(arr){
 }
 function finishLive(){ clearInterval(tickT); show('p-make'); }
 window.finishLive=finishLive;
+
+/* ===== 出席簿 ===== */
+let rosterData=null;
+function openRoster(){
+  show('p-roster');
+  document.getElementById('roster-table').innerHTML='<div class="rempty">読み込んでいます…</div>';
+  onValue(ref(db,'history'),(snap)=>{
+    rosterData=snap.val()||{};
+    renderRoster(rosterData);
+  });
+}
+window.openRoster=openRoster;
+
+function renderRoster(hist){
+  const days=Object.keys(hist).sort();              // 日付（横の列）
+  const ids={};                                      // 学籍番号→{day:record}
+  days.forEach(day=>{
+    Object.entries(hist[day]||{}).forEach(([id,rec])=>{
+      if(!ids[id]) ids[id]={};
+      ids[id][day]=rec;
+    });
+  });
+  const idList=Object.keys(ids).sort();
+
+  // サマリー
+  const sum=document.getElementById('roster-summary');
+  sum.innerHTML=
+    `<div class="box"><b>${idList.length}</b><span>のべ人数</span></div>`+
+    `<div class="box"><b>${days.length}</b><span>実施日</span></div>`;
+
+  // テーブル
+  const tbl=document.getElementById('roster-table');
+  if(idList.length===0){ tbl.innerHTML='<div class="rempty">まだ出席の記録がありません</div>'; return; }
+
+  let html='<table class="rt"><thead><tr><th>学籍番号</th>';
+  days.forEach(d=>{ html+='<th>'+d.slice(5)+'</th>'; });   // 月-日だけ表示
+  html+='<th>出席</th><th>合計点</th></tr></thead><tbody>';
+
+  idList.forEach(id=>{
+    html+='<tr><td>'+id+'</td>';
+    let attend=0, total=0;
+    days.forEach(d=>{
+      const r=ids[id][d];
+      if(r){
+        attend++; total+=(r.score||0);
+        html+='<td class="'+(r.correct?'cor':'ok')+'">'+(r.correct?'◎':'○')+'</td>';
+      }else{
+        html+='<td class="miss">·</td>';
+      }
+    });
+    html+='<td>'+attend+'</td><td>'+total+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  tbl.innerHTML=html;
+}
+
+function downloadCSV(){
+  if(!rosterData){ alert('まだ読み込み中です'); return; }
+  const hist=rosterData;
+  const days=Object.keys(hist).sort();
+  const ids={};
+  days.forEach(day=>{ Object.entries(hist[day]||{}).forEach(([id,rec])=>{ if(!ids[id])ids[id]={}; ids[id][day]=rec; }); });
+  const idList=Object.keys(ids).sort();
+  if(idList.length===0){ alert('記録がありません'); return; }
+
+  let csv='\uFEFF学籍番号';                          // BOM付きでExcelの文字化け防止
+  days.forEach(d=>csv+=','+d);
+  csv+=',出席回数,合計点\n';
+  idList.forEach(id=>{
+    let row=id, attend=0, total=0;
+    days.forEach(d=>{
+      const r=ids[id][d];
+      if(r){ attend++; total+=(r.score||0); row+=','+(r.correct?'正解':'出席'); }
+      else{ row+=','; }
+    });
+    row+=','+attend+','+total;
+    csv+=row+'\n';
+  });
+
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='出席簿_'+dayKey(Date.now())+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+window.downloadCSV=downloadCSV;
+
+function dayKey(ts){
+  const d=new Date(ts); const z=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
+}
 
 onValue(ref(db,'.info/connected'),(s)=>{
   const ok=s.val()===true;

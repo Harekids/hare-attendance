@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hare</title>
+<title>出席</title>
 <style>
   :root{
     --ink:#2a2440;
@@ -112,40 +112,35 @@
 
   <!-- 最初の画面 -->
   <div id="p-login" class="card">
-    <div class="sun" id="sun-login"></div>
-    <div class="eyebrow">Hare</div>
-    <h1 class="title">こんにちは</h1>
-    <div class="sub">学籍番号を入れて、はじめてね。</div>
+    <div class="sub">学籍番号を入力してから、「はいる」ボタンを押してください。</div>
     <label class="fld">学籍番号（半角英数字）</label>
-    <input class="txt" id="sid" placeholder="21B0457" autocomplete="off" inputmode="latin">
-    <button class="btn" onclick="studentLogin()">はじめる</button>
+    <input class="txt" id="sid" placeholder="例：21B0457" autocomplete="off" inputmode="latin">
+    <button class="btn" id="btn-login">はいる</button>
     <div class="meta" id="conn-login">サーバーに接続しています…</div>
   </div>
 
   <!-- 待機 -->
   <div id="p-wait" class="card hidden">
-    <div class="sun" id="sun-wait"></div>
     <div class="stand">
-      <span class="glyph">✏️</span>
       <h2>待機中…</h2>
-      <p>先生が問題を出すと、ここに表示されます。</p>
+      <p>選択肢が表示されたら、時間内に解答してください。</p>
       <div class="idtag" id="wait-id"></div>
-      <div class="meta" style="margin-top:14px"><span class="changelink" onclick="changeId()">学籍番号を変える</span></div>
     </div>
   </div>
 
   <!-- 回答 -->
   <div id="p-quiz" class="card hidden">
     <div class="qhead">
-      <span class="clock">のこり</span>
+      <span class="clock"></span>
       <div class="ring">
         <svg width="56" height="56"><circle cx="28" cy="28" r="23" fill="none" stroke="#eee" stroke-width="6"/>
         <circle id="s-prog" cx="28" cy="28" r="23" fill="none" stroke="#ff7a6b" stroke-width="6" stroke-linecap="round"/></svg>
         <div class="num" id="s-num">20</div>
       </div>
     </div>
-    <div class="qtext" id="s-q"></div>
+    <div class="qtext" id="s-q">正しいものを選んでください。</div>
     <div id="s-choices"></div>
+    <div class="idtag" id="quiz-id" style="margin-top:18px"></div>
   </div>
 
   <!-- 結果 -->
@@ -176,19 +171,6 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
-function drawSun(el){
-  if(!el) return;
-  el.innerHTML='<div class="core"></div>';
-  const n=12;
-  for(let i=0;i<n;i++){
-    const r=document.createElement('div'); r.className='ray';
-    r.style.transform=`translate(-50%,-50%) rotate(${i*(360/n)}deg)`;
-    el.appendChild(r);
-  }
-}
-drawSun(document.getElementById('sun-login'));
-drawSun(document.getElementById('sun-wait'));
 
 function show(id){
   ['p-login','p-wait','p-quiz','p-done'].forEach(p=>document.getElementById(p).classList.add('hidden'));
@@ -235,14 +217,7 @@ function studentLogin(){
   document.getElementById('wait-id').textContent='学籍番号：'+id;
   show('p-wait'); studentWatch();
 }
-window.studentLogin=studentLogin;
-
-function changeId(){
-  document.getElementById('sid').value=student.id||'';
-  show('p-login');
-  setTimeout(()=>{ const f=document.getElementById('sid'); f.focus(); f.select(); },120);
-}
-window.changeId=changeId;
+document.getElementById('btn-login').addEventListener('click', studentLogin);
 
 function studentWatch(){
   onValue(ref(db,'live'),(snap)=>{
@@ -263,10 +238,9 @@ function showAlreadyDone(){
   document.getElementById('s-mark').className='mark';
   document.getElementById('s-mark').textContent='✓';
   document.getElementById('s-h2').textContent='回答ずみ';
-  document.getElementById('s-msg').textContent='この問題には、この端末でもう答えています。';
+  document.getElementById('s-msg').textContent='この問題には、この端末ですでに解答しています。';
   document.getElementById('done-id').textContent='学籍番号：'+(student.id||'');
   show('p-done');
-  setTimeout(()=>backToWait(),4000);
 }
 function isAnsweringOrDone(){
   return !document.getElementById('p-quiz').classList.contains('hidden')
@@ -276,6 +250,7 @@ function isAnsweringOrDone(){
 function startStudentQuiz(q){
   curQ=q; answeredThisRound=false;
   document.getElementById('s-q').textContent=q.text;
+  document.getElementById('quiz-id').textContent='学籍番号：'+(student.id||'');
   const box=document.getElementById('s-choices');box.innerHTML='';
   const marks=['A','B','C','D','E'];
   q.options.forEach((o,i)=>{
@@ -313,22 +288,20 @@ async function chooseAnswer(i,el){
   }catch(e){}
   document.getElementById('s-mark').className='mark';
   document.getElementById('s-mark').textContent='OK!';
-  document.getElementById('s-h2').textContent='記録しました';
-  document.getElementById('s-msg').textContent='その場にいた証明、ちゃんと届きました。';
+  document.getElementById('s-h2').textContent='解答しました。';
+  document.getElementById('s-msg').textContent='';
   document.getElementById('done-id').textContent='学籍番号：'+student.id;
   show('p-done');
-  setTimeout(()=>backToWait(),4000);
 }
 function timeUp(){
   document.getElementById('s-mark').className='mark miss';
   document.getElementById('s-mark').textContent='—';
   document.getElementById('s-h2').textContent='時間切れ';
-  document.getElementById('s-msg').textContent='間に合わなかったときは、先生に直接ひとこと言えば大丈夫。';
+  document.getElementById('s-msg').textContent='間に合わなかった場合は、先生に直接お伝えください。';
   document.getElementById('done-id').textContent='学籍番号：'+student.id;
   show('p-done');
-  setTimeout(()=>backToWait(),4000);
 }
-function backToWait(){ if(student.id){ show('p-wait'); } }
+function backToWait(){ /* 完了画面で止めるため、現在は未使用 */ }
 
 onValue(ref(db,'.info/connected'),(s)=>{
   const ok=s.val()===true;
